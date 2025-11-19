@@ -9,6 +9,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'clima_carousel_view.dart';
+import 'creditos.dart';
 
 void main() async {
   await dotenv.load(fileName: ".env");
@@ -33,6 +34,7 @@ class _MyAppState extends State<MyApp> {
     final GoRouter router = GoRouter(routes:  [
       GoRoute(path: '/', builder: (context, state) => const MyHomePage(title:'Inicio')),
       GoRoute(path: '/agregar_ciudades', builder: (context, state) => AgregarCiudadesPage()),
+      GoRoute(path: '/creditos', builder: (context, state) => const CreditosPage()),
       
     ]);
     return MaterialApp.router( title: 'Weather App',
