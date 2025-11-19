@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
-
 class AppScaffold extends StatelessWidget {
   final String title;
   final Widget body;
@@ -61,6 +59,13 @@ class AppScaffold extends StatelessWidget {
                 context.go('/agregar_ciudades');
               },
             ),
+              ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('Créditos'),
+              onTap: () {
+                context.go('/creditos');
+                },
+              ),
             const Divider(),
           ],
         ),
