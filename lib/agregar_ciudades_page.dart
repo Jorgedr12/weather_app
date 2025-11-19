@@ -614,20 +614,82 @@ class _AgregarCiudadesPageState extends State<AgregarCiudadesPage> {
     debugPrint('URL de búsqueda: $url');
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: {'User-Agent': 'WeatherApp/1.0 (Flutter)'},
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('Tiempo de espera agotado');
+            },
+          );
+
+      debugPrint('Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
+        debugPrint('Ciudades encontradas: ${data.length}');
         setState(() {
           ciudadData = data;
           selectedIndex = null;
           isLoading = false;
         });
+      } else {
+        debugPrint('Error en respuesta: ${response.statusCode}');
+        if (!mounted) return;
+        setState(() {
+          isLoading = false;
+          ciudadData = [];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Error al buscar: código ${response.statusCode}'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
       }
     } catch (e) {
       debugPrint('Error al buscar ciudad: $e');
+      if (!mounted) return;
       setState(() {
         isLoading = false;
+        ciudadData = [];
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.wifi_off, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Error de conexión: ${e.toString().substring(0, 50)}...',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 
