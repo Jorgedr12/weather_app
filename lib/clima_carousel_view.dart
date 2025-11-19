@@ -1,21 +1,26 @@
+// ClimaCarouselView.dart
 import 'package:flutter/material.dart';
 import 'package:weather_icons/weather_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/gestures.dart'; // Necesario para PointerDeviceKind
 
 class ClimaCarouselView extends StatefulWidget {
   final Future<List<Map<String, dynamic>>> ciudadesGuardadas;
   final Function(Map<String, dynamic>) actualizaClima;
+
   const ClimaCarouselView({
     Key? key,
     required this.ciudadesGuardadas,
     required this.actualizaClima,
   }) : super(key: key);
+
   @override
   State<ClimaCarouselView> createState() => _ClimaCarouselViewState();
 }
 
 class _ClimaCarouselViewState extends State<ClimaCarouselView> {
-  int _currentIndex = 0; // Índice de la página actual en el PageView
+  int _currentIndex = 0;
+  final PageController _pageController = PageController();
 
   IconData _obtenerIconoClima(int simbolo) {
     switch (simbolo) {
@@ -126,20 +131,84 @@ class _ClimaCarouselViewState extends State<ClimaCarouselView> {
 
       case 1:
         return 'Despejado';
-      case 2:
-        return 'Mayormente despejado';
-      case 3:
-        return 'Parcialmente Nublado';
-      case 4:
-        return 'Nublado';
       case 101:
         return 'Despejado (noche)';
+
+      case 2:
+        return 'Mayormente despejado';
       case 102:
         return 'Mayormente despejado (noche)';
+
+      case 3:
+        return 'Parcialmente nublado';
       case 103:
         return 'Parcialmente nublado (noche)';
+
+      case 4:
+        return 'Nublado';
       case 104:
         return 'Nublado (noche)';
+
+      case 5:
+        return 'Lluvia';
+      case 105:
+        return 'Lluvia (noche)';
+
+      case 6:
+        return 'Lluvia y nieve / aguanieve';
+      case 106:
+        return 'Lluvia y nieve / aguanieve (noche)';
+
+      case 7:
+        return 'Nieve';
+      case 107:
+        return 'Nieve (noche)';
+
+      case 8:
+        return 'Chubascos';
+      case 108:
+        return 'Chubascos (noche)';
+
+      case 9:
+        return 'Chubascos de nieve';
+      case 109:
+        return 'Chubascos de nieve (noche)';
+
+      case 10:
+        return 'Chubascos de aguanieve';
+      case 110:
+        return 'Chubascos de aguanieve (noche)';
+
+      case 11:
+        return 'Neblina ligera';
+      case 111:
+        return 'Neblina ligera (noche)';
+
+      case 12:
+        return 'Neblina densa';
+      case 112:
+        return 'Neblina densa (noche)';
+
+      case 13:
+        return 'Lluvia helada';
+      case 113:
+        return 'Lluvia helada (noche)';
+
+      case 14:
+        return 'Tormentas eléctricas';
+      case 114:
+        return 'Tormentas eléctricas (noche)';
+
+      case 15:
+        return 'Llovizna';
+      case 115:
+        return 'Llovizna (noche)';
+
+      case 16:
+        return 'Tormenta de arena';
+      case 116:
+        return 'Tormenta de arena (noche)';
+
       default:
         return 'Desconocido';
     }
@@ -156,126 +225,157 @@ class _ClimaCarouselViewState extends State<ClimaCarouselView> {
   }
 
   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: widget.ciudadesGuardadas,
       builder: (context, snapshot) {
-        // Mostrar 'Loading' mientras se cargan los datos
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.blue.shade400, Colors.blue.shade700],
-              ),
-            ),
-            child: const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
-          );
+          return _buildLoading();
         }
-        // Manejar errores
+
         if (snapshot.hasError) {
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.blue.shade400, Colors.blue.shade700],
-              ),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, color: Colors.white, size: 50),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Error al cargar ciudades: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    snapshot.error.toString(),
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
+          return _buildError(snapshot.error.toString());
         }
-        // Acceder a la lista de ciudades
+
         final ciudades = snapshot.data ?? [];
+
         if (ciudades.isEmpty) {
-          return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.blue.shade400, Colors.blue.shade700],
-              ),
-            ),
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.location_off, color: Colors.white, size: 60),
-                  SizedBox(height: 20),
-                  Text(
-                    'No hay ciudades guardadas',
-                    style: TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                ],
-              ),
-            ),
-          );
+          return _buildEmpty();
         }
-        // Mostrar el Carousel de ciudades
-        return _buildCarousel(ciudades);
+
+        return _buildPageView(ciudades);
       },
     );
   }
 
-  Widget _buildCarousel(List<Map<String, dynamic>> ciudades) {
+  Widget _buildLoading() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.blue.shade400, Colors.blue.shade700],
+        ),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildError(String error) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.blue.shade400, Colors.blue.shade700],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, color: Colors.white, size: 50),
+            const SizedBox(height: 10),
+            const Text(
+              'Error al cargar ciudades',
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              error,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.blue.shade400, Colors.blue.shade700],
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: 40),
+            Icon(Icons.location_off, color: Colors.white, size: 60),
+            SizedBox(height: 20),
+            Text(
+              'No hay ciudades guardadas',
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Esta parte es la clave: permitimos arrastre de mouse además de touch
+  Widget _buildPageView(List<Map<String, dynamic>> ciudades) {
     return Stack(
       children: [
-        // CarouselView aquí
-        CarouselView(
-          itemExtent: MediaQuery.of(context).size.width,
-          shrinkExtent: MediaQuery.of(context).size.width,
-          onTap: (index) {
-            widget.actualizaClima(ciudades[index]);
-          },
-          children: List.generate(ciudades.length, (index) {
-            final ciudad = ciudades[index];
-            return _buildCiudadCard(ciudad);
-          }),
+        // ScrollConfiguration personalizado para permitir drag con mouse
+        ScrollConfiguration(
+          behavior: const _DesktopDragScrollBehavior(),
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: ciudades.length,
+            onPageChanged: (i) {
+              setState(() => _currentIndex = i);
+            },
+            itemBuilder: (context, i) {
+              return GestureDetector(
+                onTap: () => widget.actualizaClima(ciudades[i]),
+                child: _buildCiudadCard(ciudades[i]),
+              );
+            },
+          ),
         ),
+
+        // Botón de actualizar
         Positioned(
           top: 50,
           right: 20,
           child: IconButton(
-            icon: Icon(Icons.refresh, color: Colors.white),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
-              if (_currentIndex < ciudades.length) {
+              // Protección por si index está fuera de rango
+              if (_currentIndex >= 0 && _currentIndex < ciudades.length) {
                 widget.actualizaClima(ciudades[_currentIndex]);
               }
             },
           ),
         ),
       ],
-    ); // Implementación del carrusel aquí
+    );
   }
 
   Widget _buildCiudadCard(Map<String, dynamic> ciudad) {
     final temperatura = ciudad['temperatura'] ?? 0.0;
-    final simoboloClima = ciudad['simbolo_clima'] ?? 0;
+    final simboloClima = ciudad['simbolo_clima'] ?? 0;
     final velocidadViento = ciudad['velocidad_viento'] ?? 0.0;
     final nombre = ciudad['nombre'] ?? 'Desconocido';
     final ultimaActualizacion = ciudad['ultima_actualizacion'] ?? '';
+
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -288,23 +388,23 @@ class _ClimaCarouselViewState extends State<ClimaCarouselView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Nombre de la ciudad
-              Text(nombre, style: TextStyle(color: Colors.white, fontSize: 24)),
+              Text(
+                nombre,
+                style: const TextStyle(color: Colors.white, fontSize: 24),
+              ),
               const SizedBox(height: 10),
-              // Icono del clima
               Icon(
-                _obtenerIconoClima(simoboloClima),
+                _obtenerIconoClima(simboloClima),
                 color: Colors.white,
                 size: 120,
               ),
               const SizedBox(height: 10),
-              // Temperatura
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '${temperatura.toStringAsFixed(1)}',
-                    style: TextStyle(
+                    temperatura.toStringAsFixed(1),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 80,
                       fontWeight: FontWeight.w200,
@@ -324,36 +424,30 @@ class _ClimaCarouselViewState extends State<ClimaCarouselView> {
                 ],
               ),
               const SizedBox(height: 10),
-              // Descripción del clima
               Text(
-                _obtenerDescripcionClima(simoboloClima),
-                style: TextStyle(
+                _obtenerDescripcionClima(simboloClima),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.w300,
                 ),
               ),
-              const SizedBox(height: 5),
-              // Información adicional (viento, última actualización)
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoItem(
-                      Icons.air,
-                      '${velocidadViento.toStringAsFixed(1)} m/s',
-                      'Viento',
-                    ),
-                    _buildInfoItem(
-                      Icons.access_time,
-                      _formatearHora(ultimaActualizacion),
-                      'Última actualización',
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildInfoColumn(
+                    Icons.air,
+                    '${velocidadViento.toStringAsFixed(1)} m/s',
+                    'Viento',
+                  ),
+                  _buildInfoColumn(
+                    Icons.access_time,
+                    _formatearHora(ultimaActualizacion),
+                    'Última',
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
             ],
           ),
         ),
@@ -361,7 +455,7 @@ class _ClimaCarouselViewState extends State<ClimaCarouselView> {
     );
   }
 
-  Widget _buildInfoItem(IconData icon, String value, String label) {
+  Widget _buildInfoColumn(IconData icon, String value, String label) {
     return Column(
       children: [
         Icon(icon, color: Colors.white70, size: 28),
@@ -376,9 +470,21 @@ class _ClimaCarouselViewState extends State<ClimaCarouselView> {
         ),
         Text(
           label,
-          style: const TextStyle(color: Colors.white60, fontSize: 14),
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
         ),
       ],
     );
   }
+}
+
+class _DesktopDragScrollBehavior extends MaterialScrollBehavior {
+  const _DesktopDragScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.unknown,
+  };
 }
